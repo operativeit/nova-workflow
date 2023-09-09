@@ -83,7 +83,6 @@ class WorkflowDefinition
             );
     }
 
-
     public function place($placeName)
     {
         return collect($this->places())->where('name', $placeName)->first();

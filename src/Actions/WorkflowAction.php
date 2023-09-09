@@ -6,6 +6,7 @@ use Illuminate\Support\Collection;
 use Laravel\Nova\Actions\Action;
 use Laravel\Nova\Fields\ActionFields;
 use Laravel\Nova\Fields\Text;
+use Laravel\Nova\Http\Requests\NovaRequest;
 
 class WorkflowAction extends Action
 {
@@ -35,6 +36,8 @@ class WorkflowAction extends Action
      */
     public $showOnIndex = false;
 
+    public $transition = null;
+
     /**
      * Perform the action on the given models.
      *
@@ -44,27 +47,19 @@ class WorkflowAction extends Action
      */
     public function handle(ActionFields $fields, Collection $models)
     {
+        $refererUrl = request()->headers->get('referer');
+        $refererParams = parse_url($refererUrl, PHP_URL_QUERY);
+        parse_str($refererParams, $params);
+        $this->transition = data_get($params, 'transition');
+
         foreach ($models as $model) {
             try {
                 $workflow = \Workflow::get($model, \Str::lower(class_basename($model)));
-                $workflow->apply($model, request()->transition);
+                $workflow->apply($model, $this->transition ?? $model->getTransitionForAction($this));
                 $model->save();
             } catch (\Throwable $th) {
-                //throw $th;
+                throw $th;
             }
-           
         }
-    }
-
-    /**
-     * Get the fields available on the action.
-     *
-     * @return array
-     */
-    public function fields()
-    {
-        return [
-            Text::make('transition')
-        ];
     }
 }
